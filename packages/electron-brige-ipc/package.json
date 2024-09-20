@@ -1,10 +1,13 @@
 {
   "name": "electron-brige-ipc",
   "version": "0.1.0",
-  "description": "",
+  "description": "Better ipc communication for electron，Based on vscode source code",
   "author": "Yueyanc",
   "license": "ISC",
-  "keywords": [],
+  "repository": {
+    "url": "https://github.com/Yueyanc/electron-bridge-ipc"
+  },
+  "keywords": ["electron", "ipc", "vscode"],
   "exports": {
     ".": {
       "types": "./dist/common/index.d.mts",
