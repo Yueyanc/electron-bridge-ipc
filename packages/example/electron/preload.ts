@@ -1,3 +1,3 @@
-import { createPreload } from 'electron-brige-ipc/electron-main'
+import { createPreload } from 'electron-bridge-ipc/electron-main'
 
 createPreload()

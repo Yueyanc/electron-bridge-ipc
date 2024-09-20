@@ -11,8 +11,8 @@ pnpm add -D electron-bridge-ipc
 主进程
 ```javascript
 // main.ts
-import { createServer } from 'electron-brige-ipc/electron-main'
-import { DisposableStore, ProxyChannel } from 'electron-brige-ipc'
+import { createServer } from 'electron-bridge-ipc/electron-main'
+import { DisposableStore, ProxyChannel } from 'electron-bridge-ipc'
 app.whenReady().then(() => {
   const server = createServer()
   const disposables = new DisposableStore()
@@ -23,7 +23,7 @@ app.whenReady().then(() => {
 preload.ts
 
 ```javascript
-import { createPreload } from 'electron-brige-ipc/electron-main'
+import { createPreload } from 'electron-bridge-ipc/electron-main'
 
 createPreload()
 ```
@@ -32,7 +32,7 @@ createPreload()
 // main.tsx
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { createClient } from 'electron-brige-ipc/electron-sandbox'
+import { createClient } from 'electron-bridge-ipc/electron-sandbox'
 import App from './App.tsx'
 import './index.css'
 
@@ -44,7 +44,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 )
 
 // App.tsx
-import { useService } from 'electron-brige-ipc/electron-sandbox'
+import { useService } from 'electron-bridge-ipc/electron-sandbox'
 import type { IFileSystemService } from '../electron/services/FileSystemService/IFileSystemService'
 const fileSystemService = useService < IFileSystemService > ('fileSystem')
 useEffect(() => {

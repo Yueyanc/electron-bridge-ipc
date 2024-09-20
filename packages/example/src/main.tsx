@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { createClient } from 'electron-brige-ipc/electron-sandbox'
+import { createClient } from 'electron-bridge-ipc/electron-sandbox'
 import App from './App.tsx'
 import './index.css'
 

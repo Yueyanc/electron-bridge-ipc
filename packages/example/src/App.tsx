@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useService } from 'electron-brige-ipc/electron-sandbox'
+import { useService } from 'electron-bridge-ipc/electron-sandbox'
 import type { IFileSystemService } from '../electron/services/FileSystemService/IFileSystemService'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/electron-vite.animate.svg'

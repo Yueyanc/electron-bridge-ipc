@@ -553,6 +553,3 @@ function createPreload() {
   });
 }
 createPreload();
-electron.contextBridge.exposeInMainWorld("_test", {
-  a: 1
-});

@@ -2,8 +2,8 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { BrowserWindow, app } from 'electron'
-import { createServer } from 'electron-brige-ipc/electron-main'
-import { DisposableStore, ProxyChannel } from 'electron-brige-ipc'
+import { createServer } from 'electron-bridge-ipc/electron-main'
+import { DisposableStore, ProxyChannel } from 'electron-bridge-ipc'
 import { FileSystemService } from './services/FileSystemService/FileSystemService'
 
 const require = createRequire(import.meta.url)
