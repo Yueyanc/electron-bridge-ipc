@@ -4,7 +4,7 @@ export default defineConfig({
   entry: ['electron-main/index.ts', 'electron-sandbox/index.ts', 'common/index.ts'],
   splitting: false,
   sourcemap: false,
-  minify: false,
+  minify: true,
   clean: true,
   format: ['esm'],
   dts: {

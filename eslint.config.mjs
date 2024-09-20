@@ -3,6 +3,7 @@ import antfu from "@antfu/eslint-config";
 
 export default antfu({
   typescript: true,
+  markdown: false,
   ignores: ["packages/cli/babel.js"],
   rules: {
     "node/prefer-global/process": "off",
