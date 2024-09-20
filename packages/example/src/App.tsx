@@ -1,11 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useService } from 'electron-brige-ipc/electron-sandbox'
+import type { IFileSystemService } from '../electron/services/FileSystemService/IFileSystemService'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/electron-vite.animate.svg'
 import './App.css'
 
 function App() {
   const [count, setCount] = useState(0)
-
+  const fileSystemService = useService<IFileSystemService>('fileSystem')
+  useEffect(() => {
+    fileSystemService?.stat('C:\\Users\\56530\\Documents\\WXWork').then((res) => {
+      console.log(res)
+    })
+  }, [fileSystemService])
   return (
     <>
       <div>

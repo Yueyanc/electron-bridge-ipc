@@ -2,6 +2,10 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { BrowserWindow, app } from 'electron'
+import { createServer } from 'electron-brige-ipc/electron-main/index'
+import { ProxyChannel } from 'electron-brige-ipc/common/proxyChannel'
+import { DisposableStore } from 'electron-brige-ipc/common/utils/Disposable'
+import { FileSystemService } from './services/FileSystemService/FileSystemService'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -66,4 +70,9 @@ app.on('activate', () => {
   }
 })
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  const server = createServer()
+  const disposables = new DisposableStore()
+  server.registerChannel('fileSystem', ProxyChannel.fromService(new FileSystemService(), disposables))
+  createWindow()
+})

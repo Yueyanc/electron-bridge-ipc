@@ -8,5 +8,12 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "peerDependencies": {
+    "electron": "^30.0.1"
+  },
+  "devDependencies": {
+    "electron": "^30.0.1",
+    "typescript": "^5.2.2"
   }
 }

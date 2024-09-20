@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "preserveConstEnums": true,
+    "removeComments": false,
+    "sourceMap": false,
+    "esModuleInterop": true,
+    "isolatedModules": true
+  }
+}
