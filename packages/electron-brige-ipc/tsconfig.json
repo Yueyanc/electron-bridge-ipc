@@ -9,5 +9,6 @@
     "sourceMap": false,
     "esModuleInterop": true,
     "isolatedModules": true
-  }
+  },
+  "exclude": ["dist/**"]
 }

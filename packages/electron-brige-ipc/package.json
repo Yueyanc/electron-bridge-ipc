@@ -1,11 +1,25 @@
 {
   "name": "electron-brige-ipc",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "",
-  "author": "",
+  "author": "Yueyanc",
   "license": "ISC",
   "keywords": [],
-  "main": "index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/common/index.d.mts",
+      "import": "./dist/common/index.mjs"
+    },
+    "./electron-main": {
+      "types": "./dist/electron-main/index.d.mts",
+      "import": "./dist/electron-main/index.mjs"
+    },
+    "./electron-sandbox": {
+      "types": "./dist/electron-sandbox/index.d.mts",
+      "import": "./dist/electron-sandbox/index.mjs"
+    }
+  },
+  "files": ["dist"],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -14,6 +28,7 @@
   },
   "devDependencies": {
     "electron": "^30.0.1",
+    "tsup": "^8.3.0",
     "typescript": "^5.2.2"
   }
 }

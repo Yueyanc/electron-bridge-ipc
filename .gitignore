@@ -1,1 +1,3 @@
 node_modules
+packages/electron-brige-ipc/dist
+packages/example/dist-electron

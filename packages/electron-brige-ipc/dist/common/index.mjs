@@ -1,14 +1,7 @@
-"use strict";
-var __defProp = Object.defineProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-var _a;
-const electron = require("electron");
+// common/utils/Disposable.ts
 var DisposableStore = class {
-  constructor() {
-    __publicField(this, "_isDisposed", false);
-    __publicField(this, "_toDispose", /* @__PURE__ */ new Set());
-  }
+  _isDisposed = false;
+  _toDispose = /* @__PURE__ */ new Set();
   dispose() {
     if (this._isDisposed) {
       return;
@@ -41,10 +34,10 @@ var DisposableStore = class {
     return o;
   }
 };
-var Disposable = (_a = class {
-  constructor() {
-    __publicField(this, "_store", new DisposableStore());
-  }
+var Disposable = class {
+  _store = new DisposableStore();
+  static None = Object.freeze({ dispose() {
+  } });
   dispose() {
     this._store.dispose();
   }
@@ -54,8 +47,7 @@ var Disposable = (_a = class {
     }
     return this._store.add(o);
   }
-}, __publicField(_a, "None", Object.freeze({ dispose() {
-} })), _a);
+};
 function dispose(arg) {
   if (arg && Symbol.iterator in arg) {
     const errors = [];
@@ -88,21 +80,21 @@ function toDisposable(fn) {
     dispose: fn
   };
 }
+
+// common/event.ts
 var id = 0;
 var UniqueContainer = class {
   constructor(value) {
-    __publicField(this, "stack");
-    __publicField(this, "id", id++);
     this.value = value;
   }
+  stack;
+  id = id++;
 };
 var EventDeliveryQueuePrivate = class {
-  constructor() {
-    __publicField(this, "i", -1);
-    __publicField(this, "end", 0);
-    __publicField(this, "current");
-    __publicField(this, "value");
-  }
+  i = -1;
+  end = 0;
+  current;
+  value;
   enqueue(emitter, value, end) {
     this.i = 0;
     this.end = end;
@@ -124,16 +116,15 @@ function addAndReturnDisposable(d, store) {
   return d;
 }
 var Emitter = class {
+  _listeners;
+  _deliveryQueue;
+  _disposed;
+  _options;
+  _event;
+  _size = 0;
   constructor(options) {
-    __publicField(this, "_listeners");
-    __publicField(this, "_deliveryQueue");
-    __publicField(this, "_disposed");
-    __publicField(this, "_options");
-    __publicField(this, "_event");
-    __publicField(this, "_size", 0);
-    var _a2;
     this._options = options;
-    this._deliveryQueue = (_a2 = this._options) == null ? void 0 : _a2.deliveryQueue;
+    this._deliveryQueue = this._options?.deliveryQueue;
   }
   _deliver(listener, value) {
     if (!listener) {
@@ -149,12 +140,11 @@ var Emitter = class {
     dq.reset();
   }
   fire(event) {
-    var _a2;
-    if ((_a2 = this._deliveryQueue) == null ? void 0 : _a2.current) {
+    if (this._deliveryQueue?.current) {
       this._deliverQueue(this._deliveryQueue);
     }
-    if (!this._listeners) ;
-    else if (this._listeners instanceof UniqueContainer) {
+    if (!this._listeners) {
+    } else if (this._listeners instanceof UniqueContainer) {
       this._deliver(this._listeners, event);
     } else {
       const dq = this._deliveryQueue;
@@ -164,7 +154,6 @@ var Emitter = class {
   }
   get event() {
     this._event = (callback, thisArgs, disposables) => {
-      var _a2, _b, _c, _d;
       if (this._disposed) {
         return Disposable.None;
       }
@@ -173,11 +162,11 @@ var Emitter = class {
       }
       const contained = new UniqueContainer(callback);
       if (!this._listeners) {
-        (_b = (_a2 = this._options) == null ? void 0 : _a2.onWillAddFirstListener) == null ? void 0 : _b.call(_a2, this);
+        this._options?.onWillAddFirstListener?.(this);
         this._listeners = contained;
-        (_d = (_c = this._options) == null ? void 0 : _c.onDidAddFirstListener) == null ? void 0 : _d.call(_c, this);
+        this._options?.onDidAddFirstListener?.(this);
       } else if (this._listeners instanceof UniqueContainer) {
-        this._deliveryQueue ?? (this._deliveryQueue = new EventDeliveryQueuePrivate());
+        this._deliveryQueue ??= new EventDeliveryQueuePrivate();
         this._listeners = [this._listeners, contained];
       } else {
         this._listeners.push(contained);
@@ -196,14 +185,13 @@ var Emitter = class {
     return this._event;
   }
   _removeListener(listener) {
-    var _a2, _b, _c, _d;
-    (_b = (_a2 = this._options) == null ? void 0 : _a2.onWillRemoveListener) == null ? void 0 : _b.call(_a2, this);
+    this._options?.onWillRemoveListener?.(this);
     if (!this._listeners) {
       return;
     }
     if (this._size === 1) {
       this._listeners = void 0;
-      (_d = (_c = this._options) == null ? void 0 : _c.onDidRemoveLastListener) == null ? void 0 : _d.call(_c, this);
+      this._options?.onDidRemoveLastListener?.(this);
       this._size = 0;
       return;
     }
@@ -232,17 +220,16 @@ var Emitter = class {
     listeners.length = n;
   }
   dispose() {
-    var _a2, _b, _c;
     if (!this._disposed) {
       this._disposed = true;
-      if (((_a2 = this._deliveryQueue) == null ? void 0 : _a2.current) === this) {
+      if (this._deliveryQueue?.current === this) {
         this._deliveryQueue.reset();
       }
       if (this._listeners) {
         this._listeners = void 0;
         this._size = 0;
       }
-      (_c = (_b = this._options) == null ? void 0 : _b.onDidRemoveLastListener) == null ? void 0 : _c.call(_b);
+      this._options?.onDidRemoveLastListener?.();
     }
   }
 };
@@ -261,7 +248,7 @@ var Event;
       disposable.add(listener);
     }
     const flush = () => {
-      buffer2 == null ? void 0 : buffer2.forEach((e) => emitter.fire(e));
+      buffer2?.forEach((e) => emitter.fire(e));
       buffer2 = null;
     };
     const emitter = new Emitter({
@@ -303,11 +290,11 @@ var Event;
         listener = event(emitter.fire, emitter);
       },
       onDidRemoveLastListener() {
-        listener == null ? void 0 : listener.dispose();
+        listener?.dispose();
       }
     };
     const emitter = new Emitter(options);
-    disposable == null ? void 0 : disposable.add(emitter);
+    disposable?.add(emitter);
     return emitter.event;
   }
   function signal(event) {
@@ -362,40 +349,13 @@ var Event;
   }
   Event2.fromNodeEventEmitter = fromNodeEventEmitter;
 })(Event || (Event = {}));
-var shortcutEvent = Object.freeze((callback, context) => {
-  const handle = setTimeout(callback.bind(context), 0);
-  return {
-    dispose() {
-      clearTimeout(handle);
-    }
-  };
-});
-var CancellationToken;
-((CancellationToken2) => {
-  function isCancellationToken(thing) {
-    if (thing === CancellationToken2.None || thing === CancellationToken2.Cancelled) {
-      return true;
-    }
-    if (!thing || typeof thing !== "object") {
-      return false;
-    }
-    return typeof thing.isCancellationRequested === "boolean" && typeof thing.onCancellationRequested === "function";
-  }
-  CancellationToken2.isCancellationToken = isCancellationToken;
-  CancellationToken2.None = Object.freeze({
-    isCancellationRequested: false,
-    onCancellationRequested: Event.None
-  });
-  CancellationToken2.Cancelled = Object.freeze({
-    isCancellationRequested: true,
-    onCancellationRequested: shortcutEvent
-  });
-})(CancellationToken || (CancellationToken = {}));
+
+// common/utils/buffer.ts
 var hasBuffer = typeof Buffer !== "undefined";
 var ELBuffer = class _ELBuffer {
+  buffer;
+  byteLength;
   constructor(buffer) {
-    __publicField(this, "buffer");
-    __publicField(this, "byteLength");
     this.buffer = buffer;
     this.byteLength = this.buffer.byteLength;
   }
@@ -451,7 +411,7 @@ var ELBuffer = class _ELBuffer {
     return new _ELBuffer(this.buffer.subarray(start, end));
   }
   static fromString(source, options) {
-    const dontUseNodeBuffer = (options == null ? void 0 : options.dontUseNodeBuffer) || false;
+    const dontUseNodeBuffer = options?.dontUseNodeBuffer || false;
     if (!dontUseNodeBuffer && hasBuffer) {
       return new _ELBuffer(Buffer.from(source));
     } else {
@@ -474,85 +434,138 @@ var ELBuffer = class _ELBuffer {
 };
 var textEncoder;
 var textDecoder;
-({
-  Undefined: createOneByteBuffer(
-    0
-    /* Undefined */
-  ),
-  String: createOneByteBuffer(
-    1
-    /* String */
-  ),
-  Buffer: createOneByteBuffer(
-    2
-    /* Buffer */
-  ),
-  ELBuffer: createOneByteBuffer(
-    3
-    /* ELBuffer */
-  ),
-  Array: createOneByteBuffer(
-    4
-    /* Array */
-  ),
-  Object: createOneByteBuffer(
-    5
-    /* Object */
-  ),
-  Uint: createOneByteBuffer(
-    6
-    /* Int */
-  )
-});
+var BufferPresets = {
+  Undefined: createOneByteBuffer(0 /* Undefined */),
+  String: createOneByteBuffer(1 /* String */),
+  Buffer: createOneByteBuffer(2 /* Buffer */),
+  ELBuffer: createOneByteBuffer(3 /* ELBuffer */),
+  Array: createOneByteBuffer(4 /* Array */),
+  Object: createOneByteBuffer(5 /* Object */),
+  Uint: createOneByteBuffer(6 /* Int */)
+};
 function createOneByteBuffer(value) {
   const result = ELBuffer.alloc(1);
   result.writeUInt8(value, 0);
   return result;
 }
-createOneByteBuffer(0);
+var vqlZero = createOneByteBuffer(0);
 function writeUInt8(destination, value, offset) {
   destination[offset] = value;
 }
 function readUInt8(source, offset) {
   return source[offset];
 }
-function validateIPC(channel) {
-  if (!channel || !channel.startsWith("_ipc:")) {
-    throw new Error(`Unsupported event IPC channel '${channel}'`);
-  }
-  return true;
+
+// common/proxyChannel.ts
+function isUpperAsciiLetter(code) {
+  return code >= 65 /* A */ && code <= 90 /* Z */;
 }
-function createPreload() {
-  electron.contextBridge.exposeInMainWorld("__el_bridge", {
-    ipcRenderer: {
-      send(channel, ...args) {
-        if (validateIPC(channel)) {
-          electron.ipcRenderer.send(channel, ...args);
+function revive(obj, depth = 0) {
+  if (!obj || depth > 200) {
+    return obj;
+  }
+  if (typeof obj === "object") {
+    switch (obj.$mid) {
+      case 2 /* Regexp */:
+        return new RegExp(obj.source, obj.flags);
+      case 17 /* Date */:
+        return new Date(obj.source);
+    }
+    if (obj instanceof ELBuffer || obj instanceof Uint8Array) {
+      return obj;
+    }
+    if (Array.isArray(obj)) {
+      for (let i = 0; i < obj.length; ++i) {
+        obj[i] = revive(obj[i], depth + 1);
+      }
+    } else {
+      for (const key in obj) {
+        if (Object.hasOwnProperty.call(obj, key)) {
+          obj[key] = revive(obj[key], depth + 1);
         }
-      },
-      invoke(channel, ...args) {
-        validateIPC(channel);
-        return electron.ipcRenderer.invoke(channel, ...args);
-      },
-      on(channel, listener) {
-        validateIPC(channel);
-        electron.ipcRenderer.on(channel, listener);
-        return this;
-      },
-      once(channel, listener) {
-        validateIPC(channel);
-        electron.ipcRenderer.once(channel, listener);
-        return this;
-      },
-      removeListener(channel, listener) {
-        validateIPC(channel);
-        electron.ipcRenderer.removeListener(channel, listener);
-        return this;
       }
     }
-  });
+  }
+  return obj;
 }
-createPreload();
-electron.contextBridge.exposeInMainWorld("_test", {
-  a: 1
-});
+var ProxyChannel;
+((ProxyChannel2) => {
+  function propertyIsDynamicEvent(name) {
+    return name.startsWith("onDynamic") && isUpperAsciiLetter(name.charCodeAt(9));
+  }
+  function propertyIsEvent(name) {
+    return name[0] === "o" && name[1] === "n" && isUpperAsciiLetter(name.charCodeAt(2));
+  }
+  function fromService(service, disposables, options) {
+    const handler = service;
+    const disableMarshalling = options && options.disableMarshalling;
+    const mapEventNameToEvent = /* @__PURE__ */ new Map();
+    for (const key in handler) {
+      if (propertyIsEvent(key)) {
+        mapEventNameToEvent.set(key, Event.buffer(handler[key], true, void 0, disposables));
+      }
+    }
+    return new class {
+      listen(_, event, arg) {
+        const eventImpl = mapEventNameToEvent.get(event);
+        if (eventImpl) {
+          return eventImpl;
+        }
+        const target = handler[event];
+        if (typeof target === "function") {
+          if (propertyIsDynamicEvent(event)) {
+            return target.call(handler, arg);
+          }
+          if (propertyIsEvent(event)) {
+            mapEventNameToEvent.set(event, Event.buffer(handler[event], true, void 0, disposables));
+            return mapEventNameToEvent.get(event);
+          }
+        }
+        throw new Error(`Event not found: ${event}`);
+      }
+      call(_, command, args) {
+        const target = handler[command];
+        if (typeof target === "function") {
+          if (!disableMarshalling && Array.isArray(args)) {
+            for (let i = 0; i < args.length; i++) {
+              args[i] = revive(args[i]);
+            }
+          }
+          let res = target.apply(handler, args);
+          if (!(res instanceof Promise)) {
+            res = Promise.resolve(res);
+          }
+          return res;
+        }
+        throw new Error(`Method not found: ${command}`);
+      }
+    }();
+  }
+  ProxyChannel2.fromService = fromService;
+  function toService(channel, options) {
+    return new Proxy({}, {
+      get(_target, propKey) {
+        if (typeof propKey === "string") {
+          if (options?.properties?.has(propKey)) {
+            return options.properties.get(propKey);
+          }
+          return async function(...args) {
+            const result = await channel.call(propKey, args);
+            return result;
+          };
+        }
+        throw new Error(`Property not found: ${String(propKey)}`);
+      }
+    });
+  }
+  ProxyChannel2.toService = toService;
+})(ProxyChannel || (ProxyChannel = {}));
+export {
+  Disposable,
+  DisposableStore,
+  ProxyChannel,
+  combinedDisposable,
+  dispose,
+  revive,
+  toDisposable
+};
