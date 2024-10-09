@@ -4,127 +4,83 @@ var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { en
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 var _a;
 const electron = require("electron");
-var DisposableStore = class {
+var R = class {
   constructor() {
     __publicField(this, "_isDisposed", false);
     __publicField(this, "_toDispose", /* @__PURE__ */ new Set());
   }
   dispose() {
-    if (this._isDisposed) {
-      return;
-    }
-    this._isDisposed = true;
-    this.clear();
+    this._isDisposed || (this._isDisposed = true, this.clear());
   }
   clear() {
-    if (this._toDispose.size === 0) {
-      return;
-    }
-    try {
-      dispose(this._toDispose);
+    if (this._toDispose.size !== 0) try {
+      A(this._toDispose);
     } finally {
       this._toDispose.clear();
     }
   }
-  add(o) {
-    if (!o) {
-      return o;
-    }
-    if (o === this) {
-      throw new Error("Cannot register a disposable on itself!");
-    }
-    if (this._isDisposed) {
-      console.warn(new Error("Trying to add a disposable to a DisposableStore that has already been disposed of. The added object will be leaked!").stack);
-    } else {
-      this._toDispose.add(o);
-    }
-    return o;
+  add(e) {
+    if (!e) return e;
+    if (e === this) throw new Error("Cannot register a disposable on itself!");
+    return this._isDisposed ? console.warn(new Error("Trying to add a disposable to a DisposableStore that has already been disposed of. The added object will be leaked!").stack) : this._toDispose.add(e), e;
   }
-};
-var Disposable = (_a = class {
+}, _ = (_a = class {
   constructor() {
-    __publicField(this, "_store", new DisposableStore());
+    __publicField(this, "_store", new R());
   }
   dispose() {
     this._store.dispose();
   }
-  _register(o) {
-    if (o === this) {
-      throw new Error("Cannot register a disposable on itself!");
-    }
-    return this._store.add(o);
+  _register(e) {
+    if (e === this) throw new Error("Cannot register a disposable on itself!");
+    return this._store.add(e);
   }
 }, __publicField(_a, "None", Object.freeze({ dispose() {
 } })), _a);
-function dispose(arg) {
-  if (arg && Symbol.iterator in arg) {
-    const errors = [];
-    for (const d of arg) {
-      if (d) {
-        try {
-          d.dispose();
-        } catch (e) {
-          errors.push(e);
-        }
-      }
+function A(t2) {
+  if (t2 && Symbol.iterator in t2) {
+    let e = [];
+    for (let n of t2) if (n) try {
+      n.dispose();
+    } catch (s) {
+      e.push(s);
     }
-    if (errors.length === 1) {
-      throw errors[0];
-    } else if (errors.length > 1) {
-      throw new Error("Encountered errors while disposing of store");
-    }
-    return Array.isArray(arg) ? [] : arg;
-  } else if (arg && "dispose" in arg) {
-    arg.dispose();
-    return arg;
-  }
+    if (e.length === 1) throw e[0];
+    if (e.length > 1) throw new Error("Encountered errors while disposing of store");
+    return Array.isArray(t2) ? [] : t2;
+  } else if (t2 && "dispose" in t2) return t2.dispose(), t2;
 }
-function combinedDisposable(...disposables) {
-  const parent = toDisposable(() => dispose(disposables));
-  return parent;
+function Q(...t2) {
+  return g(() => A(t2));
 }
-function toDisposable(fn) {
-  return {
-    dispose: fn
-  };
+function g(t2) {
+  return { dispose: t2 };
 }
-var id = 0;
-var UniqueContainer = class {
-  constructor(value) {
+var oe = 0, q = class {
+  constructor(e) {
     __publicField(this, "stack");
-    __publicField(this, "id", id++);
-    this.value = value;
+    __publicField(this, "id", oe++);
+    this.value = e;
   }
-};
-var EventDeliveryQueuePrivate = class {
+}, Z = class {
   constructor() {
     __publicField(this, "i", -1);
     __publicField(this, "end", 0);
     __publicField(this, "current");
     __publicField(this, "value");
   }
-  enqueue(emitter, value, end) {
-    this.i = 0;
-    this.end = end;
-    this.current = emitter;
-    this.value = value;
+  enqueue(e, n, s) {
+    this.i = 0, this.end = s, this.current = e, this.value = n;
   }
   reset() {
-    this.i = this.end;
-    this.current = void 0;
-    this.value = void 0;
+    this.i = this.end, this.current = void 0, this.value = void 0;
   }
 };
-function addAndReturnDisposable(d, store) {
-  if (Array.isArray(store)) {
-    store.push(d);
-  } else if (store) {
-    store.add(d);
-  }
-  return d;
+function ae(t2, e) {
+  return Array.isArray(e) ? e.push(t2) : e && e.add(t2), t2;
 }
-var Emitter = class {
-  constructor(options) {
+var y = class {
+  constructor(e) {
     __publicField(this, "_listeners");
     __publicField(this, "_deliveryQueue");
     __publicField(this, "_disposed");
@@ -132,424 +88,207 @@ var Emitter = class {
     __publicField(this, "_event");
     __publicField(this, "_size", 0);
     var _a2;
-    this._options = options;
-    this._deliveryQueue = (_a2 = this._options) == null ? void 0 : _a2.deliveryQueue;
+    this._options = e, this._deliveryQueue = (_a2 = this._options) == null ? void 0 : _a2.deliveryQueue;
   }
-  _deliver(listener, value) {
-    if (!listener) {
-      return;
-    }
-    listener.value(value);
+  _deliver(e, n) {
+    e && e.value(n);
   }
-  _deliverQueue(dq) {
-    const listeners = dq.current._listeners;
-    while (dq.i < dq.end) {
-      this._deliver(listeners[dq.i++], dq.value);
-    }
-    dq.reset();
+  _deliverQueue(e) {
+    let n = e.current._listeners;
+    for (; e.i < e.end; ) this._deliver(n[e.i++], e.value);
+    e.reset();
   }
-  fire(event) {
+  fire(e) {
     var _a2;
-    if ((_a2 = this._deliveryQueue) == null ? void 0 : _a2.current) {
-      this._deliverQueue(this._deliveryQueue);
-    }
-    if (!this._listeners) ;
-    else if (this._listeners instanceof UniqueContainer) {
-      this._deliver(this._listeners, event);
-    } else {
-      const dq = this._deliveryQueue;
-      dq.enqueue(this, event, this._listeners.length);
-      this._deliverQueue(dq);
+    if (((_a2 = this._deliveryQueue) == null ? void 0 : _a2.current) && this._deliverQueue(this._deliveryQueue), this._listeners) if (this._listeners instanceof q) this._deliver(this._listeners, e);
+    else {
+      let n = this._deliveryQueue;
+      n.enqueue(this, e, this._listeners.length), this._deliverQueue(n);
     }
   }
   get event() {
-    this._event = (callback, thisArgs, disposables) => {
+    return this._event = (e, n, s) => {
       var _a2, _b, _c, _d;
-      if (this._disposed) {
-        return Disposable.None;
-      }
-      if (thisArgs) {
-        callback = callback.bind(thisArgs);
-      }
-      const contained = new UniqueContainer(callback);
-      if (!this._listeners) {
-        (_b = (_a2 = this._options) == null ? void 0 : _a2.onWillAddFirstListener) == null ? void 0 : _b.call(_a2, this);
-        this._listeners = contained;
-        (_d = (_c = this._options) == null ? void 0 : _c.onDidAddFirstListener) == null ? void 0 : _d.call(_c, this);
-      } else if (this._listeners instanceof UniqueContainer) {
-        this._deliveryQueue ?? (this._deliveryQueue = new EventDeliveryQueuePrivate());
-        this._listeners = [this._listeners, contained];
-      } else {
-        this._listeners.push(contained);
-      }
-      this._size++;
-      const result = toDisposable(() => {
-        this._removeListener(contained);
+      if (this._disposed) return _.None;
+      n && (e = e.bind(n));
+      let i = new q(e);
+      this._listeners ? this._listeners instanceof q ? (this._deliveryQueue ?? (this._deliveryQueue = new Z()), this._listeners = [this._listeners, i]) : this._listeners.push(i) : ((_b = (_a2 = this._options) == null ? void 0 : _a2.onWillAddFirstListener) == null ? void 0 : _b.call(_a2, this), this._listeners = i, (_d = (_c = this._options) == null ? void 0 : _c.onDidAddFirstListener) == null ? void 0 : _d.call(_c, this)), this._size++;
+      let r = g(() => {
+        this._removeListener(i);
       });
-      if (disposables instanceof DisposableStore) {
-        disposables.add(result);
-      } else if (Array.isArray(disposables)) {
-        disposables.push(result);
-      }
-      return result;
-    };
-    return this._event;
+      return s instanceof R ? s.add(r) : Array.isArray(s) && s.push(r), r;
+    }, this._event;
   }
-  _removeListener(listener) {
+  _removeListener(e) {
     var _a2, _b, _c, _d;
-    (_b = (_a2 = this._options) == null ? void 0 : _a2.onWillRemoveListener) == null ? void 0 : _b.call(_a2, this);
-    if (!this._listeners) {
-      return;
-    }
+    if ((_b = (_a2 = this._options) == null ? void 0 : _a2.onWillRemoveListener) == null ? void 0 : _b.call(_a2, this), !this._listeners) return;
     if (this._size === 1) {
-      this._listeners = void 0;
-      (_d = (_c = this._options) == null ? void 0 : _c.onDidRemoveLastListener) == null ? void 0 : _d.call(_c, this);
-      this._size = 0;
+      this._listeners = void 0, (_d = (_c = this._options) == null ? void 0 : _c.onDidRemoveLastListener) == null ? void 0 : _d.call(_c, this), this._size = 0;
       return;
     }
-    const listeners = this._listeners;
-    const index = listeners.indexOf(listener);
-    if (index === -1) {
-      console.log("disposed?", this._disposed);
-      console.log("size?", this._size);
-      console.log("arr?", JSON.stringify(this._listeners));
-      throw new Error("Attempted to dispose unknown listener");
-    }
-    this._size--;
-    listeners[index] = void 0;
-    const adjustDeliveryQueue = this._deliveryQueue.current === this;
-    let n = 0;
-    for (let i = 0; i < listeners.length; i++) {
-      if (listeners[i]) {
-        listeners[n++] = listeners[i];
-      } else if (adjustDeliveryQueue) {
-        this._deliveryQueue.end--;
-        if (n < this._deliveryQueue.i) {
-          this._deliveryQueue.i--;
-        }
-      }
-    }
-    listeners.length = n;
+    let n = this._listeners, s = n.indexOf(e);
+    if (s === -1) throw console.log("disposed?", this._disposed), console.log("size?", this._size), console.log("arr?", JSON.stringify(this._listeners)), new Error("Attempted to dispose unknown listener");
+    this._size--, n[s] = void 0;
+    let i = this._deliveryQueue.current === this, r = 0;
+    for (let o = 0; o < n.length; o++) n[o] ? n[r++] = n[o] : i && (this._deliveryQueue.end--, r < this._deliveryQueue.i && this._deliveryQueue.i--);
+    n.length = r;
   }
   dispose() {
     var _a2, _b, _c;
-    if (!this._disposed) {
-      this._disposed = true;
-      if (((_a2 = this._deliveryQueue) == null ? void 0 : _a2.current) === this) {
-        this._deliveryQueue.reset();
-      }
-      if (this._listeners) {
-        this._listeners = void 0;
-        this._size = 0;
-      }
-      (_c = (_b = this._options) == null ? void 0 : _b.onDidRemoveLastListener) == null ? void 0 : _c.call(_b);
-    }
+    this._disposed || (this._disposed = true, ((_a2 = this._deliveryQueue) == null ? void 0 : _a2.current) === this && this._deliveryQueue.reset(), this._listeners && (this._listeners = void 0, this._size = 0), (_c = (_b = this._options) == null ? void 0 : _b.onDidRemoveLastListener) == null ? void 0 : _c.call(_b));
   }
-};
-var Event;
-((Event2) => {
-  function buffer(event, flushAfterTimeout = false, _buffer = [], disposable) {
-    let buffer2 = _buffer.slice();
-    let listener = event((e) => {
-      if (buffer2) {
-        buffer2.push(e);
-      } else {
-        emitter.fire(e);
-      }
+}, m;
+((b) => {
+  function t2(l, c = false, p = [], d) {
+    let u = p.slice(), f = l((L) => {
+      u ? u.push(L) : C.fire(L);
     });
-    if (disposable) {
-      disposable.add(listener);
-    }
-    const flush = () => {
-      buffer2 == null ? void 0 : buffer2.forEach((e) => emitter.fire(e));
-      buffer2 = null;
-    };
-    const emitter = new Emitter({
-      onWillAddFirstListener() {
-        if (!listener) {
-          listener = event((e) => emitter.fire(e));
-          if (disposable) {
-            disposable.add(listener);
-          }
-        }
-      },
-      onDidAddFirstListener() {
-        if (buffer2) {
-          if (flushAfterTimeout) {
-            setTimeout(flush);
-          } else {
-            flush();
-          }
-        }
-      },
-      onDidRemoveLastListener() {
-        if (listener) {
-          listener.dispose();
-        }
-        listener = null;
-      }
-    });
-    if (disposable) {
-      disposable.add(emitter);
-    }
-    return emitter.event;
+    d && d.add(f);
+    let h = () => {
+      u == null ? void 0 : u.forEach((L) => C.fire(L)), u = null;
+    }, C = new y({ onWillAddFirstListener() {
+      f || (f = l((L) => C.fire(L)), d && d.add(f));
+    }, onDidAddFirstListener() {
+      u && (c ? setTimeout(h) : h());
+    }, onDidRemoveLastListener() {
+      f && f.dispose(), f = null;
+    } });
+    return d && d.add(C), C.event;
   }
-  Event2.buffer = buffer;
-  Event2.None = () => Disposable.None;
-  function snapshot(event, disposable) {
-    let listener;
-    const options = {
-      onWillAddFirstListener() {
-        listener = event(emitter.fire, emitter);
-      },
-      onDidRemoveLastListener() {
-        listener == null ? void 0 : listener.dispose();
-      }
-    };
-    const emitter = new Emitter(options);
-    disposable == null ? void 0 : disposable.add(emitter);
-    return emitter.event;
+  b.buffer = t2, b.None = () => _.None;
+  function n(l, c) {
+    let p, d = { onWillAddFirstListener() {
+      p = l(u.fire, u);
+    }, onDidRemoveLastListener() {
+      p == null ? void 0 : p.dispose();
+    } }, u = new y(d);
+    return c == null ? void 0 : c.add(u), u.event;
   }
-  function signal(event) {
-    return event;
+  function s(l) {
+    return l;
   }
-  Event2.signal = signal;
-  function filter(event, filter2, disposable) {
-    return snapshot((listener, thisArgs = null, disposables) => event((e) => filter2(e) && listener.call(thisArgs, e), null, disposables), disposable);
+  b.signal = s;
+  function i(l, c, p) {
+    return n((d, u = null, f) => l((h) => c(h) && d.call(u, h), null, f), p);
   }
-  Event2.filter = filter;
-  function any(...events) {
-    return (listener, thisArgs = null, disposables) => {
-      const disposable = combinedDisposable(...events.map((event) => event((e) => listener.call(thisArgs, e))));
-      return addAndReturnDisposable(disposable, disposables);
+  b.filter = i;
+  function r(...l) {
+    return (c, p = null, d) => {
+      let u = Q(...l.map((f) => f((h) => c.call(p, h))));
+      return ae(u, d);
     };
   }
-  Event2.any = any;
-  function map(event, map2, disposable) {
-    return snapshot((listener, thisArgs = null, disposables) => event((i) => listener.call(thisArgs, map2(i)), null, disposables), disposable);
+  b.any = r;
+  function o(l, c, p) {
+    return n((d, u = null, f) => l((h) => d.call(u, c(h)), null, f), p);
   }
-  Event2.map = map;
-  function once(event) {
-    return (listener, thisArgs = null, disposables) => {
-      let didFire = false;
-      const result = event((e) => {
-        if (didFire) {
-          return;
-        } else if (result) {
-          result.dispose();
-        } else {
-          didFire = true;
-        }
-        return listener.call(thisArgs, e);
-      }, null, disposables);
-      if (didFire) {
-        result.dispose();
-      }
-      return result;
+  b.map = o;
+  function a(l) {
+    return (c, p = null, d) => {
+      let u = false, f = l((h) => {
+        if (!u) return f ? f.dispose() : u = true, c.call(p, h);
+      }, null, d);
+      return u && f.dispose(), f;
     };
   }
-  Event2.once = once;
-  function toPromise(event) {
-    return new Promise((resolve) => once(event)(resolve));
+  b.once = a;
+  function v(l) {
+    return new Promise((c) => a(l)(c));
   }
-  Event2.toPromise = toPromise;
-  function fromNodeEventEmitter(emitter, eventName, map2 = (id2) => id2) {
-    const fn = (...args) => result.fire(map2(...args));
-    const onFirstListenerAdd = () => emitter.on(eventName, fn);
-    const onLastListenerRemove = () => emitter.removeListener(eventName, fn);
-    const result = new Emitter({ onWillAddFirstListener: onFirstListenerAdd, onDidRemoveLastListener: onLastListenerRemove });
-    return result.event;
+  b.toPromise = v;
+  function T(l, c, p = (d) => d) {
+    let d = (...C) => h.fire(p(...C)), u = () => l.on(c, d), f = () => l.removeListener(c, d), h = new y({ onWillAddFirstListener: u, onDidRemoveLastListener: f });
+    return h.event;
   }
-  Event2.fromNodeEventEmitter = fromNodeEventEmitter;
-})(Event || (Event = {}));
-var shortcutEvent = Object.freeze((callback, context) => {
-  const handle = setTimeout(callback.bind(context), 0);
-  return {
-    dispose() {
-      clearTimeout(handle);
-    }
-  };
+  b.fromNodeEventEmitter = T;
+})(m || (m = {}));
+var te = Object.freeze((t2, e) => {
+  let n = setTimeout(t2.bind(e), 0);
+  return { dispose() {
+    clearTimeout(n);
+  } };
 });
-var CancellationToken;
-((CancellationToken2) => {
-  function isCancellationToken(thing) {
-    if (thing === CancellationToken2.None || thing === CancellationToken2.Cancelled) {
-      return true;
-    }
-    if (!thing || typeof thing !== "object") {
-      return false;
-    }
-    return typeof thing.isCancellationRequested === "boolean" && typeof thing.onCancellationRequested === "function";
+var U;
+((s) => {
+  function t2(i) {
+    return i === s.None || i === s.Cancelled ? true : !i || typeof i != "object" ? false : typeof i.isCancellationRequested == "boolean" && typeof i.onCancellationRequested == "function";
   }
-  CancellationToken2.isCancellationToken = isCancellationToken;
-  CancellationToken2.None = Object.freeze({
-    isCancellationRequested: false,
-    onCancellationRequested: Event.None
-  });
-  CancellationToken2.Cancelled = Object.freeze({
-    isCancellationRequested: true,
-    onCancellationRequested: shortcutEvent
-  });
-})(CancellationToken || (CancellationToken = {}));
-var hasBuffer = typeof Buffer !== "undefined";
-var ELBuffer = class _ELBuffer {
-  constructor(buffer) {
+  s.isCancellationToken = t2, s.None = Object.freeze({ isCancellationRequested: false, onCancellationRequested: m.None }), s.Cancelled = Object.freeze({ isCancellationRequested: true, onCancellationRequested: te });
+})(U || (U = {}));
+var M = typeof Buffer < "u", E = class t {
+  constructor(e) {
     __publicField(this, "buffer");
     __publicField(this, "byteLength");
-    this.buffer = buffer;
-    this.byteLength = this.buffer.byteLength;
+    this.buffer = e, this.byteLength = this.buffer.byteLength;
   }
-  static wrap(actual) {
-    if (hasBuffer && !Buffer.isBuffer(actual)) {
-      actual = Buffer.from(actual.buffer, actual.byteOffset, actual.byteLength);
+  static wrap(e) {
+    return M && !Buffer.isBuffer(e) && (e = Buffer.from(e.buffer, e.byteOffset, e.byteLength)), new t(e);
+  }
+  writeUInt8(e, n) {
+    de(this.buffer, e, n);
+  }
+  readUInt8(e) {
+    return ue(this.buffer, e);
+  }
+  static alloc(e) {
+    return M ? new t(Buffer.allocUnsafe(e)) : new t(new Uint8Array(e));
+  }
+  static concat(e, n) {
+    if (typeof n > "u") {
+      n = 0;
+      for (let r = 0, o = e.length; r < o; r++) n += e[r].byteLength;
     }
-    return new _ELBuffer(actual);
-  }
-  writeUInt8(value, offset) {
-    writeUInt8(this.buffer, value, offset);
-  }
-  readUInt8(offset) {
-    return readUInt8(this.buffer, offset);
-  }
-  static alloc(byteLength) {
-    if (hasBuffer) {
-      return new _ELBuffer(Buffer.allocUnsafe(byteLength));
-    } else {
-      return new _ELBuffer(new Uint8Array(byteLength));
+    let s = t.alloc(n), i = 0;
+    for (let r = 0, o = e.length; r < o; r++) {
+      let a = e[r];
+      s.set(a, i), i += a.byteLength;
     }
+    return s;
   }
-  static concat(buffers, totalLength) {
-    if (typeof totalLength === "undefined") {
-      totalLength = 0;
-      for (let i = 0, len = buffers.length; i < len; i++) {
-        totalLength += buffers[i].byteLength;
-      }
-    }
-    const ret = _ELBuffer.alloc(totalLength);
-    let offset = 0;
-    for (let i = 0, len = buffers.length; i < len; i++) {
-      const element = buffers[i];
-      ret.set(element, offset);
-      offset += element.byteLength;
-    }
-    return ret;
+  set(e, n) {
+    if (e instanceof t) this.buffer.set(e.buffer, n);
+    else if (e instanceof Uint8Array) this.buffer.set(e, n);
+    else if (e instanceof ArrayBuffer) this.buffer.set(new Uint8Array(e), n);
+    else if (ArrayBuffer.isView(e)) this.buffer.set(new Uint8Array(e.buffer, e.byteOffset, e.byteLength), n);
+    else throw new TypeError("Unknown argument 'array'");
   }
-  set(array, offset) {
-    if (array instanceof _ELBuffer) {
-      this.buffer.set(array.buffer, offset);
-    } else if (array instanceof Uint8Array) {
-      this.buffer.set(array, offset);
-    } else if (array instanceof ArrayBuffer) {
-      this.buffer.set(new Uint8Array(array), offset);
-    } else if (ArrayBuffer.isView(array)) {
-      this.buffer.set(new Uint8Array(array.buffer, array.byteOffset, array.byteLength), offset);
-    } else {
-      throw new TypeError(`Unknown argument 'array'`);
-    }
+  slice(e, n) {
+    return new t(this.buffer.subarray(e, n));
   }
-  slice(start, end) {
-    return new _ELBuffer(this.buffer.subarray(start, end));
-  }
-  static fromString(source, options) {
-    const dontUseNodeBuffer = (options == null ? void 0 : options.dontUseNodeBuffer) || false;
-    if (!dontUseNodeBuffer && hasBuffer) {
-      return new _ELBuffer(Buffer.from(source));
-    } else {
-      if (!textEncoder) {
-        textEncoder = new TextEncoder();
-      }
-      return new _ELBuffer(textEncoder.encode(source));
-    }
+  static fromString(e, n) {
+    return !((n == null ? void 0 : n.dontUseNodeBuffer) || false) && M ? new t(Buffer.from(e)) : (K || (K = new TextEncoder()), new t(K.encode(e)));
   }
   toString() {
-    if (hasBuffer) {
-      return this.buffer.toString();
-    } else {
-      if (!textDecoder) {
-        textDecoder = new TextDecoder();
-      }
-      return textDecoder.decode(this.buffer);
-    }
+    return M ? this.buffer.toString() : (X || (X = new TextDecoder()), X.decode(this.buffer));
   }
-};
-var textEncoder;
-var textDecoder;
-({
-  Undefined: createOneByteBuffer(
-    0
-    /* Undefined */
-  ),
-  String: createOneByteBuffer(
-    1
-    /* String */
-  ),
-  Buffer: createOneByteBuffer(
-    2
-    /* Buffer */
-  ),
-  ELBuffer: createOneByteBuffer(
-    3
-    /* ELBuffer */
-  ),
-  Array: createOneByteBuffer(
-    4
-    /* Array */
-  ),
-  Object: createOneByteBuffer(
-    5
-    /* Object */
-  ),
-  Uint: createOneByteBuffer(
-    6
-    /* Int */
-  )
-});
-function createOneByteBuffer(value) {
-  const result = ELBuffer.alloc(1);
-  result.writeUInt8(value, 0);
-  return result;
+}, K, X;
+({ Undefined: w(0), String: w(1), Buffer: w(2), ELBuffer: w(3), Array: w(4), Object: w(5), Uint: w(6) });
+function w(t2) {
+  let e = E.alloc(1);
+  return e.writeUInt8(t2, 0), e;
 }
-createOneByteBuffer(0);
-function writeUInt8(destination, value, offset) {
-  destination[offset] = value;
+w(0);
+function de(t2, e, n) {
+  t2[n] = e;
 }
-function readUInt8(source, offset) {
-  return source[offset];
+function ue(t2, e) {
+  return t2[e];
 }
-function validateIPC(channel) {
-  if (!channel || !channel.startsWith("_ipc:")) {
-    throw new Error(`Unsupported event IPC channel '${channel}'`);
-  }
+function N(t2) {
+  if (!t2 || !t2.startsWith("_ipc:")) throw new Error(`Unsupported event IPC channel '${t2}'`);
   return true;
 }
-function createPreload() {
-  electron.contextBridge.exposeInMainWorld("__el_bridge", {
-    ipcRenderer: {
-      send(channel, ...args) {
-        if (validateIPC(channel)) {
-          electron.ipcRenderer.send(channel, ...args);
-        }
-      },
-      invoke(channel, ...args) {
-        validateIPC(channel);
-        return electron.ipcRenderer.invoke(channel, ...args);
-      },
-      on(channel, listener) {
-        validateIPC(channel);
-        electron.ipcRenderer.on(channel, listener);
-        return this;
-      },
-      once(channel, listener) {
-        validateIPC(channel);
-        electron.ipcRenderer.once(channel, listener);
-        return this;
-      },
-      removeListener(channel, listener) {
-        validateIPC(channel);
-        electron.ipcRenderer.removeListener(channel, listener);
-        return this;
-      }
-    }
-  });
+function Ne() {
+  electron.contextBridge.exposeInMainWorld("__el_bridge", { ipcRenderer: { send(t2, ...e) {
+    N(t2) && electron.ipcRenderer.send(t2, ...e);
+  }, invoke(t2, ...e) {
+    return N(t2), electron.ipcRenderer.invoke(t2, ...e);
+  }, on(t2, e) {
+    return N(t2), electron.ipcRenderer.on(t2, e), this;
+  }, once(t2, e) {
+    return N(t2), electron.ipcRenderer.once(t2, e), this;
+  }, removeListener(t2, e) {
+    return N(t2), electron.ipcRenderer.removeListener(t2, e), this;
+  } } });
 }
-createPreload();
+Ne();

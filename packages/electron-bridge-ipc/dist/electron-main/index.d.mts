@@ -7,6 +7,5 @@ declare class Server extends IPCServer {
 }
 
 declare function createServer(): Server;
-declare function createPreload(): void;
 
-export { createPreload, createServer };
+export { createServer };

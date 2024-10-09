@@ -5,7 +5,7 @@ import { Client } from './ipc'
 let client: Client
 export async function createClient() {
   const context = await ipcRenderer.invoke('_ipc:get-context')
-  return client = new Client(context.windowId)
+  return (client = new Client(context.windowId))
 }
 
 export function useService<T extends object>(channelName: string) {

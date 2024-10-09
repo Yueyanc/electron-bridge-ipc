@@ -1,6 +1,6 @@
 {
   "name": "electron-bridge-ipc",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Better ipc communication for electron，Based on vscode source code",
   "author": "Yueyanc",
   "license": "ISC",
@@ -10,21 +10,29 @@
   "keywords": ["electron", "ipc", "vscode"],
   "exports": {
     ".": {
+      "dev": "./common/index.ts",
       "types": "./dist/common/index.d.mts",
       "import": "./dist/common/index.mjs"
     },
     "./electron-main": {
+      "dev": "./electron-main/index.ts",
       "types": "./dist/electron-main/index.d.mts",
       "import": "./dist/electron-main/index.mjs"
     },
+    "./electron-preload": {
+      "dev": "./electron-preload/index.ts",
+      "types": "./dist/electron-preload/index.d.mts",
+      "import": "./dist/electron-preload/index.mjs"
+    },
     "./electron-sandbox": {
+      "dev": "./electron-sandbox/index.ts",
       "types": "./dist/electron-sandbox/index.d.mts",
       "import": "./dist/electron-sandbox/index.mjs"
     }
   },
   "files": ["dist"],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsup"
   },
   "peerDependencies": {
     "electron": "^30.0.1"
