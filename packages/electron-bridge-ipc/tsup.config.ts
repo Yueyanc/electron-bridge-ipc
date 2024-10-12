@@ -11,7 +11,7 @@ export default defineConfig({
   sourcemap: false,
   minify: false,
   clean: true,
-  format: ['esm'],
+  format: ['esm', 'cjs'],
   dts: {
     resolve: true,
     entry: [

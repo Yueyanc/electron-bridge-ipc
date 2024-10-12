@@ -1,4 +1,4 @@
-import { I as IPCServer } from '../ipc-DR6z8AlD.mjs';
+import { I as IPCServer } from '../ipc-gMpv30K_.mjs';
 
 declare class Server extends IPCServer {
     private static readonly Clients;

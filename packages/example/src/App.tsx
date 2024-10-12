@@ -9,9 +9,14 @@ function App() {
   const [count, setCount] = useState(0)
   const fileSystemService = useService<IFileSystemService>('fileSystem')
   useEffect(() => {
-    fileSystemService?.stat('C:\\Users\\56530\\Documents\\WXWork').then((res) => {
-      console.log(res)
+    fileSystemService?.onPing((value) => {
+      console.log(value)
     })
+    fileSystemService
+      ?.stat('C:\\Users\\56530\\Documents\\WXWork')
+      .then((res) => {
+        console.log(res)
+      })
   }, [fileSystemService])
   return (
     <>

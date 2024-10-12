@@ -610,7 +610,15 @@ var ProxyChannel;
     const mapEventNameToEvent = /* @__PURE__ */ new Map();
     for (const key in handler) {
       if (propertyIsEvent(key)) {
-        mapEventNameToEvent.set(key, Event.buffer(handler[key], true, void 0, disposables));
+        mapEventNameToEvent.set(
+          key,
+          Event.buffer(
+            handler[key],
+            true,
+            void 0,
+            disposables
+          )
+        );
       }
     }
     return new class {
@@ -625,7 +633,15 @@ var ProxyChannel;
             return target.call(handler, arg);
           }
           if (propertyIsEvent(event)) {
-            mapEventNameToEvent.set(event, Event.buffer(handler[event], true, void 0, disposables));
+            mapEventNameToEvent.set(
+              event,
+              Event.buffer(
+                handler[event],
+                true,
+                void 0,
+                disposables
+              )
+            );
             return mapEventNameToEvent.get(event);
           }
         }
@@ -651,20 +667,26 @@ var ProxyChannel;
   }
   ProxyChannel2.fromService = fromService;
   function toService(channel, options) {
-    return new Proxy({}, {
-      get(_target, propKey) {
-        if (typeof propKey === "string") {
-          if (options?.properties?.has(propKey)) {
-            return options.properties.get(propKey);
+    return new Proxy(
+      {},
+      {
+        get(_target, propKey) {
+          if (typeof propKey === "string") {
+            if (options?.properties?.has(propKey)) {
+              return options.properties.get(propKey);
+            }
+            if (propertyIsEvent(propKey)) {
+              return channel.listen(propKey);
+            }
+            return async function(...args) {
+              const result = await channel.call(propKey, args);
+              return result;
+            };
           }
-          return async function(...args) {
-            const result = await channel.call(propKey, args);
-            return result;
-          };
+          throw new Error(`Property not found: ${String(propKey)}`);
         }
-        throw new Error(`Property not found: ${String(propKey)}`);
       }
-    });
+    );
   }
   ProxyChannel2.toService = toService;
 })(ProxyChannel || (ProxyChannel = {}));
@@ -810,7 +832,9 @@ var CancellationToken;
 var ChannelClient = class {
   constructor(protocol) {
     this.protocol = protocol;
-    this.protocolListener = this.protocol.onMessage((msg) => this.onBuffer(msg));
+    this.protocolListener = this.protocol.onMessage(
+      (msg) => this.onBuffer(msg)
+    );
   }
   protocolListener;
   state = 0 /* Uninitialized */;
@@ -827,7 +851,12 @@ var ChannelClient = class {
         if (that.isDisposed) {
           return Promise.reject(new CancellationError());
         }
-        return that.requestPromise(channelName, command, arg, cancellationToken);
+        return that.requestPromise(
+          channelName,
+          command,
+          arg,
+          cancellationToken
+        );
       },
       listen(event, arg) {
         if (that.isDisposed) {
@@ -844,7 +873,9 @@ var ChannelClient = class {
     let uninitializedPromise = null;
     const emitter = new Emitter({
       onWillAddFirstListener: () => {
-        uninitializedPromise = createCancelablePromise((_) => this.whenInitialized());
+        uninitializedPromise = createCancelablePromise(
+          (_) => this.whenInitialized()
+        );
         uninitializedPromise.then(() => {
           uninitializedPromise = null;
           this.activeRequests.add(emitter);
@@ -915,7 +946,9 @@ var ChannelClient = class {
       if (this.state === 1 /* Idle */) {
         doRequest();
       } else {
-        uninitializedPromise = createCancelablePromise((_) => this.whenInitialized());
+        uninitializedPromise = createCancelablePromise(
+          (_) => this.whenInitialized()
+        );
         uninitializedPromise.then(() => {
           uninitializedPromise = null;
           doRequest();
@@ -931,7 +964,10 @@ var ChannelClient = class {
         e(new CancellationError());
       };
       const cancellationTokenListener = cancellationToken.onCancellationRequested(cancel);
-      disposable = combinedDisposable(toDisposable(cancel), cancellationTokenListener);
+      disposable = combinedDisposable(
+        toDisposable(cancel),
+        cancellationTokenListener
+      );
       this.activeRequests.add(disposable);
     });
     return result.finally(() => {
@@ -943,7 +979,10 @@ var ChannelClient = class {
     switch (request.type) {
       case 100 /* Promise */:
       case 102 /* EventListen */: {
-        this.send([request.type, request.id, request.channelName, request.name], request.arg);
+        this.send(
+          [request.type, request.id, request.channelName, request.name],
+          request.arg
+        );
         return;
       }
       case 101 /* PromiseCancel */:
@@ -1004,12 +1043,15 @@ var ChannelServer = class {
   constructor(protocol, ctx) {
     this.protocol = protocol;
     this.ctx = ctx;
-    this.protocolListener = this.protocol.onMessage((msg) => this.onRawMessage(msg));
+    this.protocolListener = this.protocol.onMessage(
+      (msg) => this.onRawMessage(msg)
+    );
     this.sendResponse({ type: 200 /* Initialize */ });
   }
   channels = /* @__PURE__ */ new Map();
   protocolListener;
   activeRequests = /* @__PURE__ */ new Map();
+  pendingRequests = /* @__PURE__ */ new Map();
   onRawMessage(msg) {
     const reader = new BufferReader(msg);
     const header = deserialize(reader);
@@ -1017,8 +1059,51 @@ var ChannelServer = class {
     const type = header[0];
     switch (type) {
       case 100 /* Promise */:
-        return this.onPromise({ type: 100 /* Promise */, id: header[1], channelName: header[2], name: header[3], arg: body });
+        return this.onPromise({
+          type: 100 /* Promise */,
+          id: header[1],
+          channelName: header[2],
+          name: header[3],
+          arg: body
+        });
+      case 102 /* EventListen */:
+        return this.onEventListen({
+          type,
+          id: header[1],
+          channelName: header[2],
+          name: header[3],
+          arg: body
+        });
     }
+  }
+  collectPendingRequest(request) {
+    let pendingRequests = this.pendingRequests.get(request.channelName);
+    if (!pendingRequests) {
+      pendingRequests = [];
+      this.pendingRequests.set(request.channelName, pendingRequests);
+    }
+    const timer = setTimeout(() => {
+      console.error(`Unknown channel: ${request.channelName}`);
+      if (request.type === 100 /* Promise */) {
+        this.sendResponse({
+          id: request.id,
+          data: { name: "Unknown channel", message: `Channel name '${request.channelName}' timed out after ${200}ms`, stack: void 0 },
+          type: 202 /* PromiseError */
+        });
+      }
+    }, 200);
+    pendingRequests.push({ request, timeoutTimer: timer });
+  }
+  onEventListen(request) {
+    const channel = this.channels.get(request.channelName);
+    if (!channel) {
+      this.collectPendingRequest(request);
+      return;
+    }
+    const id2 = request.id;
+    const event = channel.listen(this.ctx, request.name, request.arg);
+    const disposable = event((data) => this.sendResponse({ id: id2, data, type: 204 /* EventFire */ }));
+    this.activeRequests.set(request.id, disposable);
   }
   onPromise(request) {
     const channel = this.channels.get(request.channelName);
@@ -1032,23 +1117,30 @@ var ChannelServer = class {
       promise = Promise.reject(e);
     }
     const id2 = request.id;
-    promise.then((data) => {
-      this.sendResponse({ id: id2, data, type: 201 /* PromiseSuccess */ });
-    }, (err) => {
-      if (err instanceof Error) {
-        this.sendResponse({
-          id: id2,
-          data: {
-            message: err.message,
-            name: err.name,
-            stack: err.stack ? err.stack.split("\n") : void 0
-          },
-          type: 202 /* PromiseError */
-        });
-      } else {
-        this.sendResponse({ id: id2, data: err, type: 203 /* PromiseErrorObj */ });
+    promise.then(
+      (data) => {
+        this.sendResponse({ id: id2, data, type: 201 /* PromiseSuccess */ });
+      },
+      (err) => {
+        if (err instanceof Error) {
+          this.sendResponse({
+            id: id2,
+            data: {
+              message: err.message,
+              name: err.name,
+              stack: err.stack ? err.stack.split("\n") : void 0
+            },
+            type: 202 /* PromiseError */
+          });
+        } else {
+          this.sendResponse({
+            id: id2,
+            data: err,
+            type: 203 /* PromiseErrorObj */
+          });
+        }
       }
-    }).finally(() => {
+    ).finally(() => {
       this.activeRequests.delete(request.id);
     });
     const disposable = toDisposable(() => {
@@ -1065,7 +1157,10 @@ var ChannelServer = class {
       case 202 /* PromiseError */:
       case 204 /* EventFire */:
       case 203 /* PromiseErrorObj */: {
-        const msgLength = this.send([response.type, response.id], response.data);
+        const msgLength = this.send(
+          [response.type, response.id],
+          response.data
+        );
       }
     }
   }

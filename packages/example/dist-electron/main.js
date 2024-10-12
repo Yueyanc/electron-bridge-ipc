@@ -845,7 +845,9 @@ var ChannelClient = class {
     __publicField(this, "isDisposed", false);
     __publicField(this, "onDidInitialize", this._onDidInitialize.event);
     this.protocol = protocol;
-    this.protocolListener = this.protocol.onMessage((msg) => this.onBuffer(msg));
+    this.protocolListener = this.protocol.onMessage(
+      (msg) => this.onBuffer(msg)
+    );
   }
   getChannel(channelName) {
     const that = this;
@@ -854,7 +856,12 @@ var ChannelClient = class {
         if (that.isDisposed) {
           return Promise.reject(new CancellationError());
         }
-        return that.requestPromise(channelName, command, arg, cancellationToken);
+        return that.requestPromise(
+          channelName,
+          command,
+          arg,
+          cancellationToken
+        );
       },
       listen(event, arg) {
         if (that.isDisposed) {
@@ -871,7 +878,9 @@ var ChannelClient = class {
     let uninitializedPromise = null;
     const emitter = new Emitter$1({
       onWillAddFirstListener: () => {
-        uninitializedPromise = createCancelablePromise((_) => this.whenInitialized());
+        uninitializedPromise = createCancelablePromise(
+          (_) => this.whenInitialized()
+        );
         uninitializedPromise.then(() => {
           uninitializedPromise = null;
           this.activeRequests.add(emitter);
@@ -946,7 +955,9 @@ var ChannelClient = class {
       if (this.state === 1) {
         doRequest();
       } else {
-        uninitializedPromise = createCancelablePromise((_) => this.whenInitialized());
+        uninitializedPromise = createCancelablePromise(
+          (_) => this.whenInitialized()
+        );
         uninitializedPromise.then(() => {
           uninitializedPromise = null;
           doRequest();
@@ -966,7 +977,10 @@ var ChannelClient = class {
         e(new CancellationError());
       };
       const cancellationTokenListener = cancellationToken.onCancellationRequested(cancel);
-      disposable = combinedDisposable$1(toDisposable$1(cancel), cancellationTokenListener);
+      disposable = combinedDisposable$1(
+        toDisposable$1(cancel),
+        cancellationTokenListener
+      );
       this.activeRequests.add(disposable);
     });
     return result.finally(() => {
@@ -978,7 +992,10 @@ var ChannelClient = class {
     switch (request.type) {
       case 100:
       case 102: {
-        this.send([request.type, request.id, request.channelName, request.name], request.arg);
+        this.send(
+          [request.type, request.id, request.channelName, request.name],
+          request.arg
+        );
         return;
       }
       case 101:
@@ -1043,9 +1060,12 @@ var ChannelServer = class {
     __publicField(this, "channels", /* @__PURE__ */ new Map());
     __publicField(this, "protocolListener");
     __publicField(this, "activeRequests", /* @__PURE__ */ new Map());
+    __publicField(this, "pendingRequests", /* @__PURE__ */ new Map());
     this.protocol = protocol;
     this.ctx = ctx;
-    this.protocolListener = this.protocol.onMessage((msg) => this.onRawMessage(msg));
+    this.protocolListener = this.protocol.onMessage(
+      (msg) => this.onRawMessage(msg)
+    );
     this.sendResponse({
       type: 200
       /* Initialize */
@@ -1058,8 +1078,57 @@ var ChannelServer = class {
     const type = header[0];
     switch (type) {
       case 100:
-        return this.onPromise({ type: 100, id: header[1], channelName: header[2], name: header[3], arg: body });
+        return this.onPromise({
+          type: 100,
+          id: header[1],
+          channelName: header[2],
+          name: header[3],
+          arg: body
+        });
+      case 102:
+        return this.onEventListen({
+          type,
+          id: header[1],
+          channelName: header[2],
+          name: header[3],
+          arg: body
+        });
     }
+  }
+  collectPendingRequest(request) {
+    let pendingRequests = this.pendingRequests.get(request.channelName);
+    if (!pendingRequests) {
+      pendingRequests = [];
+      this.pendingRequests.set(request.channelName, pendingRequests);
+    }
+    const timer = setTimeout(() => {
+      console.error(`Unknown channel: ${request.channelName}`);
+      if (request.type === 100) {
+        this.sendResponse({
+          id: request.id,
+          data: { name: "Unknown channel", message: `Channel name '${request.channelName}' timed out after ${200}ms`, stack: void 0 },
+          type: 202
+          /* PromiseError */
+        });
+      }
+    }, 200);
+    pendingRequests.push({ request, timeoutTimer: timer });
+  }
+  onEventListen(request) {
+    const channel = this.channels.get(request.channelName);
+    if (!channel) {
+      this.collectPendingRequest(request);
+      return;
+    }
+    const id2 = request.id;
+    const event = channel.listen(this.ctx, request.name, request.arg);
+    const disposable = event((data) => this.sendResponse({
+      id: id2,
+      data,
+      type: 204
+      /* EventFire */
+    }));
+    this.activeRequests.set(request.id, disposable);
   }
   onPromise(request) {
     const channel = this.channels.get(request.channelName);
@@ -1073,34 +1142,37 @@ var ChannelServer = class {
       promise = Promise.reject(e);
     }
     const id2 = request.id;
-    promise.then((data) => {
-      this.sendResponse({
-        id: id2,
-        data,
-        type: 201
-        /* PromiseSuccess */
-      });
-    }, (err) => {
-      if (err instanceof Error) {
+    promise.then(
+      (data) => {
         this.sendResponse({
           id: id2,
-          data: {
-            message: err.message,
-            name: err.name,
-            stack: err.stack ? err.stack.split("\n") : void 0
-          },
-          type: 202
-          /* PromiseError */
+          data,
+          type: 201
+          /* PromiseSuccess */
         });
-      } else {
-        this.sendResponse({
-          id: id2,
-          data: err,
-          type: 203
-          /* PromiseErrorObj */
-        });
+      },
+      (err) => {
+        if (err instanceof Error) {
+          this.sendResponse({
+            id: id2,
+            data: {
+              message: err.message,
+              name: err.name,
+              stack: err.stack ? err.stack.split("\n") : void 0
+            },
+            type: 202
+            /* PromiseError */
+          });
+        } else {
+          this.sendResponse({
+            id: id2,
+            data: err,
+            type: 203
+            /* PromiseErrorObj */
+          });
+        }
       }
-    }).finally(() => {
+    ).finally(() => {
       this.activeRequests.delete(request.id);
     });
     const disposable = toDisposable$1(() => {
@@ -1117,7 +1189,10 @@ var ChannelServer = class {
       case 202:
       case 204:
       case 203: {
-        this.send([response.type, response.id], response.data);
+        this.send(
+          [response.type, response.id],
+          response.data
+        );
       }
     }
   }
@@ -1168,25 +1243,37 @@ var IPCServer = class {
     __publicField(this, "_onDidRemoveConnection", new Emitter$1());
     __publicField(this, "onDidRemoveConnection", this._onDidRemoveConnection.event);
     __publicField(this, "disposables", new DisposableStore$1());
-    this.disposables.add(onDidClientConnect(({ protocol, onDidClientDisconnect }) => {
-      const onFirstMessage = Event$1.once(protocol.onMessage);
-      this.disposables.add(onFirstMessage((msg) => {
-        const reader = new BufferReader(msg);
-        const ctx = deserialize(reader);
-        const channelServer = new ChannelServer(protocol, ctx);
-        const channelClient = new ChannelClient(protocol);
-        this.channels.forEach((channel, name) => channelServer.registerChannel(name, channel));
-        const connection = { channelServer, channelClient, ctx };
-        this._connections.add(connection);
-        this._onDidAddConnection.fire(connection);
-        this.disposables.add(onDidClientDisconnect(() => {
-          channelServer.dispose();
-          channelClient.dispose();
-          this._connections.delete(connection);
-          this._onDidRemoveConnection.fire(connection);
-        }));
-      }));
-    }));
+    this.disposables.add(
+      onDidClientConnect(({ protocol, onDidClientDisconnect }) => {
+        const onFirstMessage = Event$1.once(protocol.onMessage);
+        this.disposables.add(
+          onFirstMessage((msg) => {
+            const reader = new BufferReader(msg);
+            const ctx = deserialize(reader);
+            const channelServer = new ChannelServer(protocol, ctx);
+            const channelClient = new ChannelClient(protocol);
+            this.channels.forEach(
+              (channel, name) => channelServer.registerChannel(name, channel)
+            );
+            const connection = {
+              channelServer,
+              channelClient,
+              ctx
+            };
+            this._connections.add(connection);
+            this._onDidAddConnection.fire(connection);
+            this.disposables.add(
+              onDidClientDisconnect(() => {
+                channelServer.dispose();
+                channelClient.dispose();
+                this._connections.delete(connection);
+                this._onDidRemoveConnection.fire(connection);
+              })
+            );
+          })
+        );
+      })
+    );
   }
   get connections() {
     const result = [];
@@ -1199,19 +1286,50 @@ var IPCServer = class {
       call(command, arg, cancellationToken) {
         let connectionPromise;
         if (isFunction(routerOrClientFilter)) {
-          const connection = getRandomElement(that.connections.filter(routerOrClientFilter));
-          connectionPromise = connection ? Promise.resolve(connection) : Event$1.toPromise(Event$1.filter(that.onDidAddConnection, routerOrClientFilter));
+          const connection = getRandomElement(
+            that.connections.filter(routerOrClientFilter)
+          );
+          connectionPromise = connection ? (
+            // if we found a client, let's call on it
+            Promise.resolve(connection)
+          ) : (
+            // else, let's wait for a client to come along
+            Event$1.toPromise(
+              Event$1.filter(that.onDidAddConnection, routerOrClientFilter)
+            )
+          );
         } else {
-          connectionPromise = routerOrClientFilter.routeCall(that, command, arg);
+          connectionPromise = routerOrClientFilter.routeCall(
+            that,
+            command,
+            arg
+          );
         }
-        const channelPromise = connectionPromise.then((connection) => connection.channelClient.getChannel(channelName));
-        return getDelayedChannel(channelPromise).call(command, arg, cancellationToken);
+        const channelPromise = connectionPromise.then(
+          (connection) => connection.channelClient.getChannel(
+            channelName
+          )
+        );
+        return getDelayedChannel(channelPromise).call(
+          command,
+          arg,
+          cancellationToken
+        );
       },
       listen(event, arg) {
         if (isFunction(routerOrClientFilter)) {
-          return that.getMulticastEvent(channelName, routerOrClientFilter, event, arg);
+          return that.getMulticastEvent(
+            channelName,
+            routerOrClientFilter,
+            event,
+            arg
+          );
         }
-        const channelPromise = routerOrClientFilter.routeEvent(that, event, arg).then((connection) => connection.channelClient.getChannel(channelName));
+        const channelPromise = routerOrClientFilter.routeEvent(that, event, arg).then(
+          (connection) => connection.channelClient.getChannel(
+            channelName
+          )
+        );
         return getDelayedChannel(channelPromise).listen(event, arg);
       }
     };
@@ -1239,8 +1357,16 @@ var IPCServer = class {
           map.delete(connection);
         };
         that.connections.filter(clientFilter).forEach(onDidAddConnection);
-        Event$1.filter(that.onDidAddConnection, clientFilter)(onDidAddConnection, void 0, disposables);
-        that.onDidRemoveConnection(onDidRemoveConnection, void 0, disposables);
+        Event$1.filter(that.onDidAddConnection, clientFilter)(
+          onDidAddConnection,
+          void 0,
+          disposables
+        );
+        that.onDidRemoveConnection(
+          onDidRemoveConnection,
+          void 0,
+          disposables
+        );
         eventMultiplexer.event(emitter.fire, emitter, disposables);
         disposables.add(eventMultiplexer);
       },
@@ -1844,7 +1970,15 @@ var ProxyChannel;
     const mapEventNameToEvent = /* @__PURE__ */ new Map();
     for (const key in handler) {
       if (propertyIsEvent(key)) {
-        mapEventNameToEvent.set(key, Event.buffer(handler[key], true, void 0, disposables));
+        mapEventNameToEvent.set(
+          key,
+          Event.buffer(
+            handler[key],
+            true,
+            void 0,
+            disposables
+          )
+        );
       }
     }
     return new class {
@@ -1859,7 +1993,15 @@ var ProxyChannel;
             return target.call(handler, arg);
           }
           if (propertyIsEvent(event)) {
-            mapEventNameToEvent.set(event, Event.buffer(handler[event], true, void 0, disposables));
+            mapEventNameToEvent.set(
+              event,
+              Event.buffer(
+                handler[event],
+                true,
+                void 0,
+                disposables
+              )
+            );
             return mapEventNameToEvent.get(event);
           }
         }
@@ -1885,26 +2027,37 @@ var ProxyChannel;
   }
   ProxyChannel2.fromService = fromService;
   function toService(channel, options) {
-    return new Proxy({}, {
-      get(_target, propKey) {
-        var _a2;
-        if (typeof propKey === "string") {
-          if ((_a2 = options == null ? void 0 : options.properties) == null ? void 0 : _a2.has(propKey)) {
-            return options.properties.get(propKey);
+    return new Proxy(
+      {},
+      {
+        get(_target, propKey) {
+          var _a2;
+          if (typeof propKey === "string") {
+            if ((_a2 = options == null ? void 0 : options.properties) == null ? void 0 : _a2.has(propKey)) {
+              return options.properties.get(propKey);
+            }
+            if (propertyIsEvent(propKey)) {
+              return channel.listen(propKey);
+            }
+            return async function(...args) {
+              const result = await channel.call(propKey, args);
+              return result;
+            };
           }
-          return async function(...args) {
-            const result = await channel.call(propKey, args);
-            return result;
-          };
+          throw new Error(`Property not found: ${String(propKey)}`);
         }
-        throw new Error(`Property not found: ${String(propKey)}`);
       }
-    });
+    );
   }
   ProxyChannel2.toService = toService;
 })(ProxyChannel || (ProxyChannel = {}));
 class FileSystemService {
+  constructor() {
+    __publicField(this, "_onPing", new Emitter2());
+    __publicField(this, "onPing", this._onPing.event);
+  }
   stat(source) {
+    this._onPing.fire("aaaaa");
     return fs.stat(source);
   }
 }

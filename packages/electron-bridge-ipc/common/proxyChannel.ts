@@ -8,7 +8,11 @@ function isUpperAsciiLetter(code: number): boolean {
   return code >= CharCode.A && code <= CharCode.Z
 }
 interface Event<T> {
-  (listener: (e: T) => any, thisArgs?: any, disposables?: IDisposable[] | DisposableStore): IDisposable
+  (
+    listener: (e: T) => any,
+    thisArgs?: any,
+    disposables?: IDisposable[] | DisposableStore
+  ): IDisposable
 }
 enum MarshalledId {
   Uri = 1,
@@ -40,8 +44,10 @@ interface UriComponents {
 interface MarshalledObject {
   $mid: MarshalledId
 }
-type Deserialize<T> = T extends UriComponents ? any
-  : T extends ELBuffer ? ELBuffer
+type Deserialize<T> = T extends UriComponents
+  ? any
+  : T extends ELBuffer
+    ? ELBuffer
     : T extends object
       ? Revived<T>
       : T
@@ -54,14 +60,13 @@ export function revive<T = any>(obj: any, depth = 0): Revived<T> {
 
   if (typeof obj === 'object') {
     switch ((<MarshalledObject>obj).$mid) {
-      case MarshalledId.Regexp: return <any> new RegExp(obj.source, obj.flags)
-      case MarshalledId.Date: return <any> new Date(obj.source)
+      case MarshalledId.Regexp:
+        return <any> new RegExp(obj.source, obj.flags)
+      case MarshalledId.Date:
+        return <any> new Date(obj.source)
     }
 
-    if (
-      obj instanceof ELBuffer
-      || obj instanceof Uint8Array
-    ) {
+    if (obj instanceof ELBuffer || obj instanceof Uint8Array) {
       return <any>obj
     }
 
@@ -89,16 +94,26 @@ export namespace ProxyChannel {
   export interface IProxyOptions {
     disableMarshalling?: boolean
   }
-  export interface ICreateServiceChannelOptions extends IProxyOptions { }
+  export interface ICreateServiceChannelOptions extends IProxyOptions {}
   function propertyIsDynamicEvent(name: string): boolean {
     // Assume a property is a dynamic event (a method that returns an event) if it has a form of "onDynamicSomething"
-    return name.startsWith('onDynamic') && isUpperAsciiLetter(name.charCodeAt(9))
+    return (
+      name.startsWith('onDynamic') && isUpperAsciiLetter(name.charCodeAt(9))
+    )
   }
   function propertyIsEvent(name: string): boolean {
     // Assume a property is an event if it has a form of "onSomething"
-    return name[0] === 'o' && name[1] === 'n' && isUpperAsciiLetter(name.charCodeAt(2))
+    return (
+      name[0] === 'o' &&
+      name[1] === 'n' &&
+      isUpperAsciiLetter(name.charCodeAt(2))
+    )
   }
-  export function fromService<TContext>(service: unknown, disposables: DisposableStore, options?: ICreateServiceChannelOptions): IServerChannel<TContext> {
+  export function fromService<TContext>(
+    service: unknown,
+    disposables: DisposableStore,
+    options?: ICreateServiceChannelOptions,
+  ): IServerChannel<TContext> {
     const handler = service as { [key: string]: unknown }
     const disableMarshalling = options && options.disableMarshalling
 
@@ -110,11 +125,19 @@ export namespace ProxyChannel {
     const mapEventNameToEvent = new Map<string, Event<unknown>>()
     for (const key in handler) {
       if (propertyIsEvent(key)) {
-        mapEventNameToEvent.set(key, EventType.buffer(handler[key] as Event<unknown>, true, undefined, disposables))
+        mapEventNameToEvent.set(
+          key,
+          EventType.buffer(
+            handler[key] as Event<unknown>,
+            true,
+            undefined,
+            disposables,
+          ),
+        )
       }
     }
 
-    return new class implements IServerChannel {
+    return new (class implements IServerChannel {
       listen<T>(_: unknown, event: string, arg: any): Event<T> {
         const eventImpl = mapEventNameToEvent.get(event)
         if (eventImpl) {
@@ -128,7 +151,15 @@ export namespace ProxyChannel {
           }
 
           if (propertyIsEvent(event)) {
-            mapEventNameToEvent.set(event, EventType.buffer(handler[event] as Event<unknown>, true, undefined, disposables))
+            mapEventNameToEvent.set(
+              event,
+              EventType.buffer(
+                handler[event] as Event<unknown>,
+                true,
+                undefined,
+                disposables,
+              ),
+            )
 
             return mapEventNameToEvent.get(event) as Event<T>
           }
@@ -156,22 +187,33 @@ export namespace ProxyChannel {
 
         throw new Error(`Method not found: ${command}`)
       }
-    }()
+    })()
   }
-  export function toService<T extends object>(channel: IChannel, options?: ICreateProxyServiceOptions): T {
-    return new Proxy({}, {
-      get(_target: T, propKey: PropertyKey) {
-        if (typeof propKey === 'string') {
-          if (options?.properties?.has(propKey)) {
-            return options.properties.get(propKey)
+  export function toService<T extends object>(
+    channel: IChannel,
+    options?: ICreateProxyServiceOptions,
+  ): T {
+    return new Proxy(
+      {},
+      {
+        get(_target: T, propKey: PropertyKey) {
+          if (typeof propKey === 'string') {
+            if (options?.properties?.has(propKey)) {
+              return options.properties.get(propKey)
+            }
+
+            // Event
+            if (propertyIsEvent(propKey)) {
+              return channel.listen(propKey)
+            }
+            return async function (...args: any[]) {
+              const result = await channel.call(propKey, args)
+              return result
+            }
           }
-          return async function (...args: any[]) {
-            const result = await channel.call(propKey, args)
-            return result
-          }
-        }
-        throw new Error(`Property not found: ${String(propKey)}`)
+          throw new Error(`Property not found: ${String(propKey)}`)
+        },
       },
-    }) as T
+    ) as T
   }
 }

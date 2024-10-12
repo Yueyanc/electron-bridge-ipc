@@ -115,6 +115,27 @@ function addAndReturnDisposable(d, store) {
   }
   return d;
 }
+function createSingleCallFunction(fn, fnDidRunCallback) {
+  const _this = this;
+  let didCall = false;
+  let result;
+  return function() {
+    if (didCall) {
+      return result;
+    }
+    didCall = true;
+    if (fnDidRunCallback) {
+      try {
+        result = fn.apply(_this, arguments);
+      } finally {
+        fnDidRunCallback();
+      }
+    } else {
+      result = fn.apply(_this, arguments);
+    }
+    return result;
+  };
+}
 var Emitter = class {
   _listeners;
   _deliveryQueue;
@@ -231,6 +252,84 @@ var Emitter = class {
       }
       this._options?.onDidRemoveLastListener?.();
     }
+  }
+};
+var Relay = class {
+  listening = false;
+  inputEvent = Event.None;
+  inputEventListener = Disposable.None;
+  emitter = new Emitter({
+    onDidAddFirstListener: () => {
+      this.listening = true;
+      this.inputEventListener = this.inputEvent(this.emitter.fire, this.emitter);
+    },
+    onDidRemoveLastListener: () => {
+      this.listening = false;
+      this.inputEventListener.dispose();
+    }
+  });
+  event = this.emitter.event;
+  set input(event) {
+    this.inputEvent = event;
+    if (this.listening) {
+      this.inputEventListener.dispose();
+      this.inputEventListener = event(this.emitter.fire, this.emitter);
+    }
+  }
+  dispose() {
+    this.inputEventListener.dispose();
+    this.emitter.dispose();
+  }
+};
+var EventMultiplexer = class {
+  emitter;
+  hasListeners = false;
+  events = [];
+  constructor() {
+    this.emitter = new Emitter({
+      onWillAddFirstListener: () => this.onFirstListenerAdd(),
+      onDidRemoveLastListener: () => this.onLastListenerRemove()
+    });
+  }
+  get event() {
+    return this.emitter.event;
+  }
+  add(event) {
+    const e = { event, listener: null };
+    this.events.push(e);
+    if (this.hasListeners) {
+      this.hook(e);
+    }
+    const dispose2 = () => {
+      if (this.hasListeners) {
+        this.unhook(e);
+      }
+      const idx = this.events.indexOf(e);
+      this.events.splice(idx, 1);
+    };
+    return toDisposable(createSingleCallFunction(dispose2));
+  }
+  onFirstListenerAdd() {
+    this.hasListeners = true;
+    this.events.forEach((e) => this.hook(e));
+  }
+  onLastListenerRemove() {
+    this.hasListeners = false;
+    this.events.forEach((e) => this.unhook(e));
+  }
+  hook(e) {
+    e.listener = e.event((r) => this.emitter.fire(r));
+  }
+  unhook(e) {
+    e.listener?.dispose();
+    e.listener = null;
+  }
+  dispose() {
+    this.emitter.dispose();
+    for (const e of this.events) {
+      e.listener?.dispose();
+    }
+    this.events = [];
   }
 };
 var Event;
@@ -502,7 +601,15 @@ var ProxyChannel;
     const mapEventNameToEvent = /* @__PURE__ */ new Map();
     for (const key in handler) {
       if (propertyIsEvent(key)) {
-        mapEventNameToEvent.set(key, Event.buffer(handler[key], true, void 0, disposables));
+        mapEventNameToEvent.set(
+          key,
+          Event.buffer(
+            handler[key],
+            true,
+            void 0,
+            disposables
+          )
+        );
       }
     }
     return new class {
@@ -517,7 +624,15 @@ var ProxyChannel;
             return target.call(handler, arg);
           }
           if (propertyIsEvent(event)) {
-            mapEventNameToEvent.set(event, Event.buffer(handler[event], true, void 0, disposables));
+            mapEventNameToEvent.set(
+              event,
+              Event.buffer(
+                handler[event],
+                true,
+                void 0,
+                disposables
+              )
+            );
             return mapEventNameToEvent.get(event);
           }
         }
@@ -543,28 +658,39 @@ var ProxyChannel;
   }
   ProxyChannel2.fromService = fromService;
   function toService(channel, options) {
-    return new Proxy({}, {
-      get(_target, propKey) {
-        if (typeof propKey === "string") {
-          if (options?.properties?.has(propKey)) {
-            return options.properties.get(propKey);
+    return new Proxy(
+      {},
+      {
+        get(_target, propKey) {
+          if (typeof propKey === "string") {
+            if (options?.properties?.has(propKey)) {
+              return options.properties.get(propKey);
+            }
+            if (propertyIsEvent(propKey)) {
+              return channel.listen(propKey);
+            }
+            return async function(...args) {
+              const result = await channel.call(propKey, args);
+              return result;
+            };
           }
-          return async function(...args) {
-            const result = await channel.call(propKey, args);
-            return result;
-          };
+          throw new Error(`Property not found: ${String(propKey)}`);
         }
-        throw new Error(`Property not found: ${String(propKey)}`);
       }
-    });
+    );
   }
   ProxyChannel2.toService = toService;
 })(ProxyChannel || (ProxyChannel = {}));
 export {
   Disposable,
   DisposableStore,
+  Emitter,
+  Event,
+  EventMultiplexer,
   ProxyChannel,
+  Relay,
   combinedDisposable,
+  createSingleCallFunction,
   dispose,
   revive,
   toDisposable

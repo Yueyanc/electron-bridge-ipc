@@ -17,6 +17,7 @@ export default antfu({
     "prefer-promise-reject-errors": "off",
     "unicorn/no-new-array": "off",
     "accessor-pairs": "off",
+    "style/operator-linebreak": "off",
     "ts/no-duplicate-enum-values": "off",
     "style/no-tabs": "off",
     "style/max-statements-per-line": "off",

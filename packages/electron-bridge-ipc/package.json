@@ -1,6 +1,6 @@
 {
   "name": "electron-bridge-ipc",
-  "version": "0.1.3",
+  "version": "0.1.6",
   "description": "Better ipc communication for electron，Based on vscode source code",
   "author": "Yueyanc",
   "license": "ISC",
@@ -12,22 +12,32 @@
     ".": {
       "dev": "./common/index.ts",
       "types": "./dist/common/index.d.mts",
-      "import": "./dist/common/index.mjs"
+      "import": "./dist/common/index.mjs",
+      "require": "./dist/common/index.js"
     },
     "./electron-main": {
       "dev": "./electron-main/index.ts",
       "types": "./dist/electron-main/index.d.mts",
-      "import": "./dist/electron-main/index.mjs"
+      "import": "./dist/electron-main/index.mjs",
+      "require": "./dist/electron-main/index.js"
     },
     "./electron-preload": {
       "dev": "./electron-preload/index.ts",
       "types": "./dist/electron-preload/index.d.mts",
-      "import": "./dist/electron-preload/index.mjs"
+      "import": "./dist/electron-preload/index.mjs",
+      "require": "./dist/electron-preload/index.js"
     },
     "./electron-sandbox": {
       "dev": "./electron-sandbox/index.ts",
       "types": "./dist/electron-sandbox/index.d.mts",
-      "import": "./dist/electron-sandbox/index.mjs"
+      "import": "./dist/electron-sandbox/index.mjs",
+      "require": "./dist/electron-sandbox/index.js"
+    },
+    "./common": {
+      "dev": "./common/index.ts",
+      "types": "./dist/common/index.d.mts",
+      "import": "./dist/common/index.mjs",
+      "require": "./dist/common/index.js"
     }
   },
   "files": ["dist"],

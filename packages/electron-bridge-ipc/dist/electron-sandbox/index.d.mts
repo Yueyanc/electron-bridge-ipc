@@ -1,4 +1,4 @@
-import { a as IPCClient, b as IDisposable } from '../ipc-DR6z8AlD.mjs';
+import { a as IPCClient, b as IDisposable } from '../ipc-gMpv30K_.mjs';
 
 declare class Client extends IPCClient implements IDisposable {
     private protocol;
