@@ -10,5 +10,5 @@ export interface IpcRenderer {
   on: (channel: string, listener: (event: IpcRendererEvent, ...args: any[]) => void) => this
 }
 
-const bridge = globalThis.__el_bridge
-export const ipcRenderer: IpcRenderer = bridge.ipcRenderer
+const bridge = globalThis?.__el_bridge
+export const ipcRenderer: IpcRenderer = bridge?.ipcRenderer
