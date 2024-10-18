@@ -1239,14 +1239,8 @@ var IPCServer = class {
           const connection = getRandomElement(
             that.connections.filter(routerOrClientFilter)
           );
-          connectionPromise = connection ? (
-            // if we found a client, let's call on it
-            Promise.resolve(connection)
-          ) : (
-            // else, let's wait for a client to come along
-            Event.toPromise(
-              Event.filter(that.onDidAddConnection, routerOrClientFilter)
-            )
+          connectionPromise = connection ? Promise.resolve(connection) : Event.toPromise(
+            Event.filter(that.onDidAddConnection, routerOrClientFilter)
           );
         } else {
           connectionPromise = routerOrClientFilter.routeCall(

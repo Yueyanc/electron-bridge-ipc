@@ -1,6 +1,6 @@
 {
   "name": "electron-bridge-ipc",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Better ipc communication for electron，Based on vscode source code",
   "author": "Yueyanc",
   "license": "ISC",

@@ -692,8 +692,8 @@ var ProxyChannel;
 })(ProxyChannel || (ProxyChannel = {}));
 
 // electron-sandbox/globals.ts
-var bridge = globalThis.__el_bridge;
-var ipcRenderer = bridge.ipcRenderer;
+var bridge = globalThis?.__el_bridge;
+var ipcRenderer = bridge?.ipcRenderer;
 
 // common/cancellation.ts
 var shortcutEvent = Object.freeze((callback, context) => {
