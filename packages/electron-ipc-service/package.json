@@ -1,0 +1,22 @@
+{
+  "name": "electron-ipc-service",
+  "version": "0.0.1",
+  "description": "",
+  "author": "",
+  "license": "ISC",
+  "keywords": [],
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "dependencies": {
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/lodash": "^4.17.10",
+    "@types/node": "^22.7.5",
+    "electron": "^30.5.1",
+    "lodash": "^4.17.21"
+  }
+}
