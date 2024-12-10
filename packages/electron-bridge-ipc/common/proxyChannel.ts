@@ -90,6 +90,11 @@ export function revive<T = any>(obj: any, depth = 0): Revived<T> {
 export interface ICreateProxyServiceOptions {
   properties?: Map<string, unknown>
 }
+type PromisifyMethods<T> = {
+    [K in keyof T]: T[K] extends (...args: any[]) => any 
+        ? (...args: Parameters<T[K]>) => Promise<ReturnType<T[K]>>
+        : T[K]
+};
 export namespace ProxyChannel {
   export interface IProxyOptions {
     disableMarshalling?: boolean
@@ -192,7 +197,7 @@ export namespace ProxyChannel {
   export function toService<T extends object>(
     channel: IChannel,
     options?: ICreateProxyServiceOptions,
-  ): T {
+  ): PromisifyMethods<T> {
     return new Proxy(
       {},
       {
